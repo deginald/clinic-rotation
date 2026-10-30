@@ -301,7 +301,7 @@ function deskRow(x,i,T,line){
   else if(x.status==='break'){chips+='<span class="chip">On break</span>';btns+=`<button class="sm" data-act="status" data-s="available" data-id="${x.id}">Back in</button>`}
   else{
     if(x.request_waiting>0) btns=`<button class="sm hi" data-act="startreq" data-id="${x.id}">Start request client</button>`+btns;
-    btns+=`<button class="sm" data-act="status" data-s="break" data-id="${x.id}">Break</button><button class="sm" data-act="status" data-s="absent" data-id="${x.id}">Absent</button><button class="sm" data-act="front" data-id="${x.id}">To front</button><button class="sm" data-act="back" data-id="${x.id}">To back</button>`;
+    btns+=`<button class="sm" data-act="status" data-s="break" data-id="${x.id}">Break</button><button class="sm" data-act="status" data-s="absent" data-id="${x.id}">Absent</button><button class="sm" data-act="back" data-id="${x.id}">To back</button>`;
   }
   return `<div class="row"><div class="who"><span class="arrows">${up}${dn}</span><span class="num">${i+1}.</span><strong>${esc(x.name)}</strong>${chips}</div><div class="btns">${btns}</div></div>`;
 }
