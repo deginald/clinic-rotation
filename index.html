@@ -39,6 +39,10 @@ button.sm{font-size:13px;padding:5px 9px}
 .row .who{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .row .btns{display:flex;gap:6px;flex-wrap:wrap}
 .num{display:inline-block;min-width:26px;font-weight:600;color:var(--muted)}
+.arrows{display:inline-flex;flex-direction:column;gap:2px;width:26px}
+.arrows button{padding:0 6px;font-size:11px;line-height:16px;border-radius:6px}
+.arrows .sp{height:18px}
+.fsbtn{position:fixed;top:12px;right:12px;font-size:16px;padding:8px 14px;background:#2a323b;color:#e5e9ee;border-color:#3a444f;z-index:5}
 .chip{font-size:12px;padding:2px 9px;border-radius:999px;background:#eeece7;color:#444;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
 .chip.req{background:var(--req-bg);color:var(--req)}
 .chip.busy{background:var(--busy-bg);color:var(--busy)}
@@ -92,12 +96,12 @@ body.tv{background:#101418;color:#f2f2f2}
 /* ===== Setup: paste your Supabase details here (Supabase → Project Settings → API) ===== */
 const CONFIG = {
   SUPABASE_URL: 'https://lxaboxyxiqcejosyyafb.supabase.co',
-  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4YWJveHl4aXFjZWpvc3l5YWZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNjg1NDAsImV4cCI6MjEwODk0NDU0MH0.zcK-zrWAIOszTrKSNYICsbT8Wd-N7QIcwLHcsMGEpu8',
+  SUPABASE_ANON_KEY: 'PASTE_KEY_BETWEEN_THESE_QUOTES',
   APP_NAME: 'Clinic Rotation'
 };
 /* ====================================================================================== */
 
-const DEMO = !String(CONFIG.SUPABASE_URL).startsWith('http');
+const DEMO = !String(CONFIG.SUPABASE_URL).startsWith('http') || String(CONFIG.SUPABASE_ANON_KEY).startsWith('PASTE');
 const APP = CONFIG.APP_NAME;
 
 function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
@@ -153,6 +157,8 @@ function makeLocalBackend(){
     request_count:(s,a)=>{desk(s,a.p_pin);const x=stu(s,a.p_student);x.request_waiting=Math.max(0,x.request_waiting+a.p_delta)},
     set_status:(s,a)=>{desk(s,a.p_pin);const x=stu(s,a.p_student);if(x.status==='busy')fail('Finish the current client first');x.status=a.p_status;x.status_since=now()},
     move_to_back:(s,a)=>{desk(s,a.p_pin);const x=stu(s,a.p_student);x.position=maxPos(s,x.class_id)+1},
+    move_to_front:(s,a)=>{desk(s,a.p_pin);const x=stu(s,a.p_student);x.position=Math.min(...s.students.filter(y=>y.class_id===x.class_id).map(y=>y.position))-1},
+    swap_positions:(s,a)=>{desk(s,a.p_pin);const x=stu(s,a.p_a),y=stu(s,a.p_b);if(x.class_id!==y.class_id)fail('Those students are in different classes');[x.position,y.position]=[y.position,x.position]},
     add_student:(s,a)=>{desk(s,a.p_pin);const name=String(a.p_name||'').trim();if(!name)fail('Enter a name');if(!pinOk(a.p_student_pin))fail('PIN must be 4 digits');const id=uid();s.students.push({id,class_id:a.p_class,name,position:maxPos(s,a.p_class)+1,status:'available',current_kind:null,status_since:now(),request_waiting:0});s.pins[id]=a.p_student_pin;return id},
     remove_student:(s,a)=>{desk(s,a.p_pin);s.students=s.students.filter(x=>x.id!==a.p_student);delete s.pins[a.p_student]},
     set_student_pin:(s,a)=>{desk(s,a.p_pin);if(!pinOk(a.p_new_pin))fail('PIN must be 4 digits');stu(s,a.p_student);s.pins[a.p_student]=a.p_new_pin},
@@ -278,7 +284,7 @@ function deskView(){
   <div class="card">
     ${nx?`<div class="next"><div><div class="l">Next walk-in goes to</div><div class="n">${esc(nx.name)}</div></div><button class="go" data-act="assign" data-id="${nx.id}">Assign walk-in</button></div>`
         :`<div class="next none"><div class="muted">Nobody is free for a walk-in right now.</div></div>`}
-    ${line.length?line.map((x,i)=>deskRow(x,i,T)).join(''):'<p class="muted">No students on the line. Add students under Settings below.</p>'}
+    ${line.length?line.map((x,i)=>deskRow(x,i,T,line)).join(''):'<p class="muted">No students on the line. Add students under Settings below.</p>'}
   </div>
   ${floor.length?`<div class="card"><h2>With walk-in clients</h2>${floor.map(x=>floorRow(x,T,true)).join('')}</div>`:''}
   ${absent.length?`<div class="card"><h2>Absent</h2>${absent.map(x=>`<div class="row"><div class="who"><strong>${esc(x.name)}</strong><span class="chip bad">Absent</span></div><div class="btns"><button class="sm" data-act="status" data-s="available" data-id="${x.id}">Here</button></div></div>`).join('')}</div>`:''}
@@ -287,16 +293,18 @@ function deskView(){
   </div>`;
 }
 
-function deskRow(x,i,T){
+function deskRow(x,i,T,line){
+  const up=i>0?`<button data-act="swap" data-id="${x.id}" data-other="${line[i-1].id}" aria-label="Move ${esc(x.name)} up">▲</button>`:'<span class="sp"></span>';
+  const dn=i<line.length-1?`<button data-act="swap" data-id="${x.id}" data-other="${line[i+1].id}" aria-label="Move ${esc(x.name)} down">▼</button>`:'<span class="sp"></span>';
   let chips='',btns=`<button class="sm" data-act="req" data-d="1" data-id="${x.id}">+ Request</button>`;
   if(x.request_waiting>0) chips+=`<span class="chip req">${x.request_waiting} waiting <button data-act="req" data-d="-1" data-id="${x.id}" aria-label="Remove a waiting request client">−</button></span>`;
   if(x.status==='busy'){chips+=`<span class="chip busy">With request client · keeps #${i+1}</span>`+timerChip(x,T);btns+=`<button class="sm primary" data-act="done" data-id="${x.id}">Done</button>`}
   else if(x.status==='break'){chips+='<span class="chip warn">On break</span>';btns+=`<button class="sm" data-act="status" data-s="available" data-id="${x.id}">Back in</button>`}
   else{
     if(x.request_waiting>0) btns=`<button class="sm hi" data-act="startreq" data-id="${x.id}">Start request client</button>`+btns;
-    btns+=`<button class="sm" data-act="status" data-s="break" data-id="${x.id}">Break</button><button class="sm" data-act="status" data-s="absent" data-id="${x.id}">Absent</button><button class="sm" data-act="back" data-id="${x.id}">To back</button>`;
+    btns+=`<button class="sm" data-act="status" data-s="break" data-id="${x.id}">Break</button><button class="sm" data-act="status" data-s="absent" data-id="${x.id}">Absent</button><button class="sm" data-act="front" data-id="${x.id}">To front</button><button class="sm" data-act="back" data-id="${x.id}">To back</button>`;
   }
-  return `<div class="row"><div class="who"><span class="num">${i+1}.</span><strong>${esc(x.name)}</strong>${chips}</div><div class="btns">${btns}</div></div>`;
+  return `<div class="row"><div class="who"><span class="arrows">${up}${dn}</span><span class="num">${i+1}.</span><strong>${esc(x.name)}</strong>${chips}</div><div class="btns">${btns}</div></div>`;
 }
 
 function floorRow(x,T,desk){
@@ -337,7 +345,8 @@ function tvView(){
     if(x.status==='break') chips+=`<span class="chip warn">On break</span>`;
     return `<div class="row"><div class="who"><span class="num">${i+1}.</span>${esc(x.name)}${chips}</div></div>`;
   }).join('');
-  return `<div class="wrap">
+  const isFs=!!(document.fullscreenElement||document.webkitFullscreenElement);
+  return `${isFs?'':'<button class="fsbtn" data-act="fs">Full screen</button>'}<div class="wrap">
   <header class="top"><h1>${esc(CN(cls))} · clinic rotation</h1><span class="live">${new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</span></header>
   <div class="tvgrid"><div>
     <div class="next"><div>${nx?`<div class="l">Next walk-in</div><div class="n">${esc(nx.name)}</div>`:`<div class="l">Next walk-in</div><div class="n" style="font-size:28px">Next free student</div>`}</div><div style="text-align:right"><div class="l">Walk-ins waiting</div><div class="n">${c.walkins_waiting}</div></div></div>
@@ -418,6 +427,9 @@ const ACT={
   done:async(b,id)=>{await call('finish_client',{p_pin:DESK,p_student:id})},
   status:async(b,id)=>{await call('set_status',{p_pin:DESK,p_student:id,p_status:b.dataset.s})},
   back:async(b,id)=>{await call('move_to_back',{p_pin:DESK,p_student:id})},
+  front:async(b,id)=>{await call('move_to_front',{p_pin:DESK,p_student:id})},
+  swap:async(b,id)=>{await call('swap_positions',{p_pin:DESK,p_a:id,p_b:b.dataset.other})},
+  fs:async()=>{const d=document.documentElement;try{if(d.requestFullscreen)await d.requestFullscreen();else if(d.webkitRequestFullscreen)d.webkitRequestFullscreen()}catch(e){toast('Press F11 for full screen')}},
   addstu:async()=>{const n=(DRAFT.ns_name||'').trim(),p=(DRAFT.ns_pin||'').trim();let bad=false;
     if(!n){setErr('ns_name','Enter a name');bad=true} if(!/^\d{4}$/.test(p)){setErr('ns_pin','Use 4 digits');bad=true} if(bad)return;
     await call('add_student',{p_pin:DESK,p_class:S.settings.active_class,p_name:n,p_student_pin:p});DRAFT.ns_name='';DRAFT.ns_pin='';document.activeElement&&document.activeElement.blur();toast(`${n} added`)},
@@ -438,7 +450,7 @@ const ACT={
     const csv=[['Date','Started','Finished','Student','Class','Type','Checked out by'].map(q).join(',')].concat(rows.map(h=>[new Date(h.started_at).toLocaleDateString(),fmtTime(h.started_at),fmtTime(h.finished_at),h.student_name,CN(h.class_id),h.kind==='request'?'Request':'Walk-in',h.finished_by==='student'?'Student scan':h.finished_by==='desk'?'Front desk':''].map(q).join(','))).join('\n');
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='clinic-history.csv';a.click()}
 };
-const REFRESH_AFTER=new Set(['class','walkins','assign','startreq','req','done','status','back','addstu','rmstu','pinstu','timer','newcode','s-done']);
+const REFRESH_AFTER=new Set(['class','walkins','assign','startreq','req','done','status','back','front','swap','addstu','rmstu','pinstu','timer','newcode','s-done']);
 
 async function runAct(act,el){
   if(!ACT[act])return;
@@ -452,6 +464,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset&&e.
 function onDraft(e){const k=e.target.dataset&&e.target.dataset.draft;if(k){DRAFT[k]=e.target.value;setErr(k,'')}}
 document.addEventListener('input',onDraft);document.addEventListener('change',onDraft);
 document.addEventListener('focusout',()=>setTimeout(()=>{if(render.pending)render()},0));
+document.addEventListener('fullscreenchange',()=>render());document.addEventListener('webkitfullscreenchange',()=>render());
 document.addEventListener('toggle',e=>{if(e.target.id)e.target.open?OPEN.add(e.target.id):OPEN.delete(e.target.id)},true);
 
 /* ---------- Start ---------- */
