@@ -88,18 +88,14 @@ body.tv{background:#101418;color:#f2f2f2}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="config.js"></script>
 </head>
 <body>
 <div id="app"><div class="wrap"><p class="muted">Loading…</p></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
 <script>
-/* ===== Setup: paste your Supabase details here (Supabase → Project Settings → API) ===== */
-const CONFIG = {
-  SUPABASE_URL: 'https://lxaboxyxiqcejosyyafb.supabase.co',
-  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4YWJveHl4aXFjZWpvc3l5YWZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNjg1NDAsImV4cCI6MjEwODk0NDU0MH0.zcK-zrWAIOszTrKSNYICsbT8Wd-N7QIcwLHcsMGEpu8',
-  APP_NAME: 'Clinic Rotation'
-};
-/* ====================================================================================== */
+/* Supabase details live in config.js (uploaded next to this file). Without it, the app runs in demo mode. */
+const CONFIG = Object.assign({SUPABASE_URL:'',SUPABASE_ANON_KEY:'',APP_NAME:'Clinic Rotation'}, window.ROTATION_CONFIG||{});
 
 const DEMO = !String(CONFIG.SUPABASE_URL).startsWith('http') || String(CONFIG.SUPABASE_ANON_KEY).startsWith('PASTE');
 const APP = CONFIG.APP_NAME;
@@ -160,6 +156,7 @@ function makeLocalBackend(){
     move_to_front:(s,a)=>{desk(s,a.p_pin);const x=stu(s,a.p_student);x.position=Math.min(...s.students.filter(y=>y.class_id===x.class_id).map(y=>y.position))-1},
     swap_positions:(s,a)=>{desk(s,a.p_pin);const x=stu(s,a.p_a),y=stu(s,a.p_b);if(x.class_id!==y.class_id)fail('Those students are in different classes');[x.position,y.position]=[y.position,x.position]},
     add_student:(s,a)=>{desk(s,a.p_pin);const name=String(a.p_name||'').trim();if(!name)fail('Enter a name');if(!pinOk(a.p_student_pin))fail('PIN must be 4 digits');const id=uid();s.students.push({id,class_id:a.p_class,name,position:maxPos(s,a.p_class)+1,status:'available',current_kind:null,status_since:now(),request_waiting:0});s.pins[id]=a.p_student_pin;return id},
+    rename_student:(s,a)=>{desk(s,a.p_pin);const n=String(a.p_name||'').trim();if(!n)fail('Enter a name');const x=stu(s,a.p_student);x.name=n;s.history.filter(h=>h.student_id===x.id).forEach(h=>h.student_name=n)},
     remove_student:(s,a)=>{desk(s,a.p_pin);s.students=s.students.filter(x=>x.id!==a.p_student);delete s.pins[a.p_student]},
     set_student_pin:(s,a)=>{desk(s,a.p_pin);if(!pinOk(a.p_new_pin))fail('PIN must be 4 digits');stu(s,a.p_student);s.pins[a.p_student]=a.p_new_pin},
     new_scan_code:(s,a)=>{desk(s,a.p_pin);s.settings.scan_code=newCode()},
@@ -201,7 +198,7 @@ const VIEW=(P.get('view')||'desk').toLowerCase();
 const CODE=(P.get('code')||'').toUpperCase();
 let B=null, LOADERR=null, LIVE=DEMO, DESK=null, rendered=false;
 let S={settings:{},classes:[],students:[],today:[]};
-const DRAFT={}, OPEN=new Set();
+const DRAFT={}, OPEN=new Set(); let EDIT=null;
 let H={rows:null};
 let ME=null; try{ME=JSON.parse(lsGet('rotation_student')||'null')}catch(e){}
 
@@ -322,7 +319,9 @@ function settingsPanel(cls,T){
   const st=S.students.filter(x=>x.class_id===cls).sort((a,b)=>a.name.localeCompare(b.name));
   return `<details class="card" id="settings" ${OPEN.has('settings')?'open':''}><summary>Settings and students</summary>
   <div class="sec"><h2>Students in ${esc(CN(cls))}</h2>
-    ${st.length?st.map(x=>`<div class="row"><strong>${esc(x.name)}</strong><div class="btns"><button class="sm" data-act="pinstu" data-id="${x.id}">Reset PIN</button><button class="sm" data-act="rmstu" data-id="${x.id}">Remove</button></div></div>`).join(''):'<p class="muted">No students yet.</p>'}
+    ${st.length?st.map(x=>EDIT===x.id
+      ?`<div class="row"><div class="addrow" style="margin:0;flex:1">${inp('rn_'+x.id,`aria-label="New name for ${esc(x.name)}" style="min-width:200px" data-enter="rnsave" data-id="${x.id}"`,x.name)}</div><div class="btns"><button class="sm primary" data-act="rnsave" data-id="${x.id}">Save</button><button class="sm" data-act="rncancel">Cancel</button></div></div>`
+      :`<div class="row"><strong>${esc(x.name)}</strong><div class="btns"><button class="sm" data-act="rnstart" data-id="${x.id}">Rename</button><button class="sm" data-act="pinstu" data-id="${x.id}">Reset PIN</button><button class="sm" data-act="rmstu" data-id="${x.id}">Remove</button></div></div>`).join(''):'<p class="muted">No students yet.</p>'}
     <div class="addrow">${inp('ns_name','placeholder="Student name" data-enter="addstu"')}${inp('ns_pin','placeholder="4-digit PIN" inputmode="numeric" maxlength="4" style="width:130px" data-enter="addstu"')}<button class="primary" data-act="addstu">Add student</button></div>
     <p class="muted">New students join at the back of the line. Give each student their PIN for the scan code.</p>
   </div>
@@ -433,6 +432,10 @@ const ACT={
   addstu:async()=>{const n=(DRAFT.ns_name||'').trim(),p=(DRAFT.ns_pin||'').trim();let bad=false;
     if(!n){setErr('ns_name','Enter a name');bad=true} if(!/^\d{4}$/.test(p)){setErr('ns_pin','Use 4 digits');bad=true} if(bad)return;
     await call('add_student',{p_pin:DESK,p_class:S.settings.active_class,p_name:n,p_student_pin:p});DRAFT.ns_name='';DRAFT.ns_pin='';document.activeElement&&document.activeElement.blur();toast(`${n} added`)},
+  rnstart:(b,id)=>{const x=S.students.find(s=>s.id===id);if(!x)return;EDIT=id;DRAFT['rn_'+id]=x.name;render();const el=document.querySelector(`[data-draft="rn_${id}"]`);if(el){el.focus();el.select()}},
+  rncancel:()=>{EDIT=null;document.activeElement&&document.activeElement.blur();render()},
+  rnsave:async(b,id)=>{id=id||EDIT;const n=(DRAFT['rn_'+id]||'').trim();if(!n)return setErr('rn_'+id,'Enter a name');
+    await call('rename_student',{p_pin:DESK,p_student:id,p_name:n});EDIT=null;document.activeElement&&document.activeElement.blur();toast('Name updated')},
   rmstu:async(b,id)=>{const x=S.students.find(s=>s.id===id);if(x&&confirm(`Remove ${x.name}? Their history stays.`))await call('remove_student',{p_pin:DESK,p_student:id})},
   pinstu:async(b,id)=>{const x=S.students.find(s=>s.id===id);const p=prompt(`New 4-digit PIN for ${x?x.name:'this student'}:`);if(p===null)return;if(!/^\d{4}$/.test(p.trim()))return toast('PIN must be 4 digits');await call('set_student_pin',{p_pin:DESK,p_student:id,p_new_pin:p.trim()});toast('PIN updated')},
   timer:async()=>{const m=Math.round(+(DRAFT.timer??S.settings.timer_minutes));if(!(m>=5&&m<=240))return setErr('timer','5 to 240');await call('set_timer',{p_pin:DESK,p_minutes:m});delete DRAFT.timer;document.activeElement&&document.activeElement.blur();toast('Timer saved')},
@@ -450,7 +453,7 @@ const ACT={
     const csv=[['Date','Started','Finished','Student','Class','Type','Checked out by'].map(q).join(',')].concat(rows.map(h=>[new Date(h.started_at).toLocaleDateString(),fmtTime(h.started_at),fmtTime(h.finished_at),h.student_name,CN(h.class_id),h.kind==='request'?'Request':'Walk-in',h.finished_by==='student'?'Student scan':h.finished_by==='desk'?'Front desk':''].map(q).join(','))).join('\n');
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='clinic-history.csv';a.click()}
 };
-const REFRESH_AFTER=new Set(['class','walkins','assign','startreq','req','done','status','back','front','swap','addstu','rmstu','pinstu','timer','newcode','s-done']);
+const REFRESH_AFTER=new Set(['class','walkins','assign','startreq','req','done','status','back','front','swap','addstu','rnsave','rmstu','pinstu','timer','newcode','s-done']);
 
 async function runAct(act,el){
   if(!ACT[act])return;
@@ -460,7 +463,7 @@ async function runAct(act,el){
   finally{if(el)el._busy=false}
 }
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b)runAct(b.dataset.act,b)});
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.enter){e.preventDefault();runAct(e.target.dataset.enter,null)}});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.enter){e.preventDefault();runAct(e.target.dataset.enter,e.target)}});
 function onDraft(e){const k=e.target.dataset&&e.target.dataset.draft;if(k){DRAFT[k]=e.target.value;setErr(k,'')}}
 document.addEventListener('input',onDraft);document.addEventListener('change',onDraft);
 document.addEventListener('focusout',()=>setTimeout(()=>{if(render.pending)render()},0));
