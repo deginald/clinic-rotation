@@ -30,10 +30,11 @@ button.sm{font-size:13px;padding:5px 9px}
 .metric{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
 .metric .l{font-size:12px;color:var(--muted)}
 .metric .v{font-size:24px;font-weight:600;display:flex;align-items:center;gap:10px}
-.next{background:var(--ok-bg);border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
-.next.none{background:#efede8}
-.next .l{font-size:12px;color:var(--ok)}
-.next .n{font-size:20px;font-weight:600;color:var(--ok)}
+.next{background:#FFF4CC;border:1px solid #F2C94C;border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.next.none{background:#efede8;border-color:transparent}
+.next button.go{background:#4A3500;border-color:#4A3500;color:#FFF4CC}
+.next .l{font-size:12px;color:#6B4E00}
+.next .n{font-size:20px;font-weight:600;color:#4A3500}
 .row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 2px;border-bottom:1px solid var(--line)}
 .row:last-child{border-bottom:0}
 .row .who{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -73,15 +74,16 @@ body.tv{background:#101418;color:#f2f2f2}
 .tv .live{font-size:20px;color:#cfd6dd}
 .tvgrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:24px}
 .tv .card{background:#1a2027;border-color:#2a323b}
-.tv .next{background:#1e4d33;padding:18px 22px}
-.tv .next .l{color:#bfe8cf;font-size:18px}
-.tv .next .n{font-size:44px;color:#fff}
+.tv .next{background:#F2C94C;border-color:#F2C94C;padding:18px 22px}
+.tv .next .l{color:#4A3500;font-size:18px}
+.tv .next .n{font-size:44px;color:#2B1F00}
 .tv .row{font-size:26px;border-color:#2a323b;padding:12px 4px}
 .tv .num{color:#8d99a6;min-width:44px}
 .tv .chip{font-size:17px;padding:4px 12px;background:#2a323b;color:#e5e9ee}
 .tv .chip.req{background:#352f6b;color:#ddd8ff}
 .tv .chip.busy{background:#1d3550;color:#cfe2f7}
 .tv .chip.warn{background:#5a4210;color:#ffd98a}
+.tv .chip.bad{background:#5A1E1E;color:#FFC9C9}
 .qr{background:#fff;border-radius:14px;padding:16px;text-align:center;color:#111}
 .qr svg{width:100%;height:auto;max-width:280px}
 @media (max-width:800px){.tvgrid{grid-template-columns:1fr}.tv .row{font-size:20px}.tv .next .n{font-size:32px}}
@@ -223,7 +225,7 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 function setErr(k,m){const el=document.querySelector(`[data-err="${k}"]`);if(el)el.textContent=m||'';else if(m)toast(m)}
 function inp(k,attrs,def){return `<span class="field"><input data-draft="${k}" value="${esc(DRAFT[k]??def??'')}" ${attrs||''}><span class="err" data-err="${k}"></span></span>`}
 function liveBadge(){return DEMO?`<span class="live on"><span class="dot"></span>Demo mode</span>`:`<span class="live ${LIVE?'on':''}"><span class="dot"></span>${LIVE?'Live':'Connecting…'}</span>`}
-function timerChip(x,T){const m=mins(x.status_since);return `<span class="chip ${m>=T?'warn':''}">${m} min${m>=T?' · check on them':''}</span>`}
+function timerChip(x,T){const m=mins(x.status_since);return `<span class="chip ${m>=T?'bad':''}">${m} min${m>=T?' · check on them':''}</span>`}
 
 /* ---------- Data loading ---------- */
 let rt=null;
@@ -296,7 +298,7 @@ function deskRow(x,i,T,line){
   let chips='',btns=`<button class="sm" data-act="req" data-d="1" data-id="${x.id}">+ Request</button>`;
   if(x.request_waiting>0) chips+=`<span class="chip req">${x.request_waiting} waiting <button data-act="req" data-d="-1" data-id="${x.id}" aria-label="Remove a waiting request client">−</button></span>`;
   if(x.status==='busy'){chips+=`<span class="chip busy">With request client · keeps #${i+1}</span>`+timerChip(x,T);btns+=`<button class="sm primary" data-act="done" data-id="${x.id}">Done</button>`}
-  else if(x.status==='break'){chips+='<span class="chip warn">On break</span>';btns+=`<button class="sm" data-act="status" data-s="available" data-id="${x.id}">Back in</button>`}
+  else if(x.status==='break'){chips+='<span class="chip">On break</span>';btns+=`<button class="sm" data-act="status" data-s="available" data-id="${x.id}">Back in</button>`}
   else{
     if(x.request_waiting>0) btns=`<button class="sm hi" data-act="startreq" data-id="${x.id}">Start request client</button>`+btns;
     btns+=`<button class="sm" data-act="status" data-s="break" data-id="${x.id}">Break</button><button class="sm" data-act="status" data-s="absent" data-id="${x.id}">Absent</button><button class="sm" data-act="front" data-id="${x.id}">To front</button><button class="sm" data-act="back" data-id="${x.id}">To back</button>`;
@@ -341,7 +343,7 @@ function tvView(){
     let chips='';
     if(x.request_waiting>0) chips+=`<span class="chip req">${x.request_waiting} waiting</span>`;
     if(x.status==='busy') chips+=`<span class="chip busy">With request client</span>`+timerChip(x,T);
-    if(x.status==='break') chips+=`<span class="chip warn">On break</span>`;
+    if(x.status==='break') chips+=`<span class="chip">On break</span>`;
     return `<div class="row"><div class="who"><span class="num">${i+1}.</span>${esc(x.name)}${chips}</div></div>`;
   }).join('');
   const isFs=!!(document.fullscreenElement||document.webkitFullscreenElement);
