@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clinic Rotation</title>
+<style>
+:root{--bg:#f5f3ef;--card:#fff;--ink:#1d1d1f;--muted:#6b6b70;--line:#e4e1da;--brand:#1f3a5f;--ok:#1e7a4c;--ok-bg:#e3f4ea;--warn:#8a5a00;--warn-bg:#fdf0d5;--bad:#a12c2c;--bad-bg:#fbe6e6;--req:#4b3fa8;--req-bg:#ece9fb;--busy:#1f3a5f;--busy-bg:#e6eef8}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.4}
+a{color:var(--brand)}
+.wrap{max-width:920px;margin:0 auto;padding:16px}
+.phone{max-width:440px}
+header.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+h1{font-size:20px;margin:0}
+h2{font-size:15px;margin:0 0 8px}
+.live{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.live .dot{width:9px;height:9px;border-radius:50%;background:#aaa}
+.live.on .dot{background:var(--ok)}
+button{font:inherit;font-size:14px;padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+button:hover{border-color:#bdb8ad}
+button.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+button.go{background:var(--ok);color:#fff;border-color:var(--ok)}
+button.hi{background:var(--req);color:#fff;border-color:var(--req)}
+button.sm{font-size:13px;padding:5px 9px}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.seg button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:12px}
+.metric{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.metric .l{font-size:12px;color:var(--muted)}
+.metric .v{font-size:24px;font-weight:600;display:flex;align-items:center;gap:10px}
+.next{background:var(--ok-bg);border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.next.none{background:#efede8}
+.next .l{font-size:12px;color:var(--ok)}
+.next .n{font-size:20px;font-weight:600;color:var(--ok)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 2px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .who{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.row .btns{display:flex;gap:6px;flex-wrap:wrap}
+.num{display:inline-block;min-width:26px;font-weight:600;color:var(--muted)}
+.chip{font-size:12px;padding:2px 9px;border-radius:999px;background:#eeece7;color:#444;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.chip.req{background:var(--req-bg);color:var(--req)}
+.chip.busy{background:var(--busy-bg);color:var(--busy)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.bad{background:var(--bad-bg);color:var(--bad)}
+.chip button{padding:0 7px;font-size:12px;border-radius:999px;border:0;background:rgba(0,0,0,.08);color:inherit}
+.muted{color:var(--muted);font-size:13px}
+input,select{font:inherit;font-size:14px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+.field{display:inline-flex;flex-direction:column;gap:2px;vertical-align:top}
+.err{color:var(--bad);font-size:13px;min-height:0}
+.addrow{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;margin-top:10px}
+details>summary{cursor:pointer;font-weight:600}
+.sec{margin-top:18px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:6px;border-bottom:1px solid var(--line)}
+th{font-size:12px;color:var(--muted);font-weight:600}
+.tablewrap{overflow-x:auto}
+.demo{background:var(--warn-bg);color:var(--warn);font-size:13px;padding:8px 12px;border-radius:8px;margin-bottom:12px}
+.stack>*{display:block;width:100%;margin-bottom:10px}
+.big{width:100%;font-size:20px;padding:16px;border-radius:12px}
+.status{font-size:18px;font-weight:600;margin:4px 0 2px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;z-index:10}
+#toast.show{opacity:1}
+body.tv{background:#101418;color:#f2f2f2}
+.tv .wrap{max-width:none;padding:24px 32px}
+.tv h1{font-size:30px}
+.tv h2{font-size:20px;color:#cfd6dd}
+.tv .live{font-size:20px;color:#cfd6dd}
+.tvgrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:24px}
+.tv .card{background:#1a2027;border-color:#2a323b}
+.tv .next{background:#1e4d33;padding:18px 22px}
+.tv .next .l{color:#bfe8cf;font-size:18px}
+.tv .next .n{font-size:44px;color:#fff}
+.tv .row{font-size:26px;border-color:#2a323b;padding:12px 4px}
+.tv .num{color:#8d99a6;min-width:44px}
+.tv .chip{font-size:17px;padding:4px 12px;background:#2a323b;color:#e5e9ee}
+.tv .chip.req{background:#352f6b;color:#ddd8ff}
+.tv .chip.busy{background:#1d3550;color:#cfe2f7}
+.tv .chip.warn{background:#5a4210;color:#ffd98a}
+.qr{background:#fff;border-radius:14px;padding:16px;text-align:center;color:#111}
+.qr svg{width:100%;height:auto;max-width:280px}
+@media (max-width:800px){.tvgrid{grid-template-columns:1fr}.tv .row{font-size:20px}.tv .next .n{font-size:32px}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+</head>
+<body>
+<div id="app"><div class="wrap"><p class="muted">Loading…</p></div></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+/* ===== Setup: paste your Supabase details here (Supabase → Project Settings → API) ===== */
+const CONFIG = {
+  SUPABASE_URL: 'https://lxaboxyxiqcejosyyafb.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4YWJveHl4aXFjZWpvc3l5YWZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNjg1NDAsImV4cCI6MjEwODk0NDU0MH0.zcK-zrWAIOszTrKSNYICsbT8Wd-N7QIcwLHcsMGEpu8',
+  APP_NAME: 'Clinic Rotation'
+};
+/* ====================================================================================== */
+
+const DEMO = !String(CONFIG.SUPABASE_URL).startsWith('http');
+const APP = CONFIG.APP_NAME;
+
+function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+function lsDel(k){try{localStorage.removeItem(k)}catch(e){}}
+
+/* ---------- Demo backend: same rules as the database, saved in this browser ---------- */
+function makeLocalBackend(){
+  const KEY='rotation_demo_v1', listeners=new Set();
+  let bc=null; try{bc=new BroadcastChannel('rotation_demo')}catch(e){}
+  const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
+  const newCode=()=>Math.random().toString(36).slice(2,8).toUpperCase();
+  const now=()=>new Date().toISOString();
+  function seed(){
+    const names={full:['Marcus T.','Jasmine R.','Andre W.','Kevin L.','Tia M.'],part:['Darius K.','Brianna S.','Luis P.','Ray J.'],night:['Nia F.','Chris D.','Omar H.','Kayla B.']};
+    const students=[],pins={};
+    for(const c in names) names[c].forEach((n,i)=>{const id=uid();students.push({id,class_id:c,name:n,position:i+1,status:'available',current_kind:null,status_since:now(),request_waiting:0});pins[id]='1111';});
+    return {settings:{id:1,active_class:'full',timer_minutes:45,scan_code:newCode()},
+      classes:[{id:'full',name:'Full time',sort:1,walkins_waiting:0},{id:'part',name:'Part time',sort:2,walkins_waiting:0},{id:'night',name:'Night class',sort:3,walkins_waiting:0}],
+      students,pins,desk_pin:'1234',history:[],hid:1};
+  }
+  function read(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s)return s}catch(e){} const s=seed();lsSet(KEY,JSON.stringify(s));return s}
+  function write(s){lsSet(KEY,JSON.stringify(s));if(bc)bc.postMessage('x');listeners.forEach(f=>f())}
+  if(bc) bc.onmessage=()=>listeners.forEach(f=>f());
+  window.addEventListener('storage',e=>{if(e.key===KEY)listeners.forEach(f=>f())});
+  const fail=m=>{throw new Error(m)};
+  const desk=(s,p)=>{if(p!==s.desk_pin)fail('Wrong front desk PIN')};
+  const stu=(s,id)=>s.students.find(x=>x.id===id)||fail('Student not found');
+  const maxPos=(s,c)=>Math.max(0,...s.students.filter(x=>x.class_id===c).map(x=>x.position));
+  const pinOk=p=>/^\d{4}$/.test(p||'');
+  function start(s,id,kind){
+    const x=stu(s,id); if(x.status!=='available') fail('That student is not free right now');
+    x.status='busy';x.current_kind=kind;x.status_since=now();
+    if(kind==='request') x.request_waiting=Math.max(0,x.request_waiting-1);
+    else {const c=s.classes.find(c=>c.id===x.class_id);c.walkins_waiting=Math.max(0,c.walkins_waiting-1);}
+    s.history.push({id:s.hid++,student_id:x.id,student_name:x.name,class_id:x.class_id,kind,started_at:x.status_since,finished_at:null,finished_by:null});
+  }
+  function finish(s,id,by){
+    const x=stu(s,id); if(x.status!=='busy') return;
+    if(x.current_kind==='walkin') x.position=maxPos(s,x.class_id)+1;
+    x.status='available';x.current_kind=null;x.status_since=now();
+    s.history.filter(h=>h.student_id===id&&!h.finished_at).forEach(h=>{h.finished_at=x.status_since;h.finished_by=by});
+  }
+  const READONLY=new Set(['desk_login','student_verify','get_history']);
+  const fns={
+    desk_login:(s,a)=>a.p_pin===s.desk_pin,
+    set_active_class:(s,a)=>{desk(s,a.p_pin);s.settings.active_class=a.p_class},
+    walkin_count:(s,a)=>{desk(s,a.p_pin);const c=s.classes.find(c=>c.id===a.p_class);c.walkins_waiting=Math.max(0,c.walkins_waiting+a.p_delta)},
+    start_client:(s,a)=>{desk(s,a.p_pin);start(s,a.p_student,a.p_kind)},
+    finish_client:(s,a)=>{desk(s,a.p_pin);finish(s,a.p_student,'desk')},
+    student_verify:(s,a)=>s.pins[a.p_student]===a.p_pin,
+    student_finish:(s,a)=>{if(String(a.p_code||'').toUpperCase()!==s.settings.scan_code)fail('This scan code has expired. Scan the code on the TV again.');if(s.pins[a.p_student]!==a.p_pin)fail('Wrong PIN. Tap "Not you?" and sign in again.');finish(s,a.p_student,'student')},
+    request_count:(s,a)=>{desk(s,a.p_pin);const x=stu(s,a.p_student);x.request_waiting=Math.max(0,x.request_waiting+a.p_delta)},
+    set_status:(s,a)=>{desk(s,a.p_pin);const x=stu(s,a.p_student);if(x.status==='busy')fail('Finish the current client first');x.status=a.p_status;x.status_since=now()},
+    move_to_back:(s,a)=>{desk(s,a.p_pin);const x=stu(s,a.p_student);x.position=maxPos(s,x.class_id)+1},
+    add_student:(s,a)=>{desk(s,a.p_pin);const name=String(a.p_name||'').trim();if(!name)fail('Enter a name');if(!pinOk(a.p_student_pin))fail('PIN must be 4 digits');const id=uid();s.students.push({id,class_id:a.p_class,name,position:maxPos(s,a.p_class)+1,status:'available',current_kind:null,status_since:now(),request_waiting:0});s.pins[id]=a.p_student_pin;return id},
+    remove_student:(s,a)=>{desk(s,a.p_pin);s.students=s.students.filter(x=>x.id!==a.p_student);delete s.pins[a.p_student]},
+    set_student_pin:(s,a)=>{desk(s,a.p_pin);if(!pinOk(a.p_new_pin))fail('PIN must be 4 digits');stu(s,a.p_student);s.pins[a.p_student]=a.p_new_pin},
+    new_scan_code:(s,a)=>{desk(s,a.p_pin);s.settings.scan_code=newCode()},
+    set_timer:(s,a)=>{desk(s,a.p_pin);const m=Math.round(+a.p_minutes);if(!(m>=5&&m<=240))fail('Pick between 5 and 240 minutes');s.settings.timer_minutes=m},
+    get_history:(s,a)=>{desk(s,a.p_pin);return s.history.filter(h=>h.started_at>=a.p_from&&h.started_at<a.p_to).sort((x,y)=>y.started_at.localeCompare(x.started_at))}
+  };
+  return {
+    async load(){const s=read();return {settings:s.settings,classes:s.classes,students:s.students}},
+    async rpc(name,args){const s=read();const r=fns[name](s,args||{});if(!READONLY.has(name))write(s);return r},
+    subscribe(f){listeners.add(f)}
+  };
+}
+
+/* ---------- Supabase backend ---------- */
+function makeSupabaseBackend(){
+  if(typeof supabase==='undefined') throw new Error('Could not load Supabase. Check the internet connection.');
+  const sb=supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY);
+  return {
+    async load(){
+      const [a,b,c]=await Promise.all([
+        sb.from('settings').select('*').eq('id',1).single(),
+        sb.from('classes').select('*').order('sort'),
+        sb.from('students').select('*').order('position')]);
+      for(const r of [a,b,c]) if(r.error) throw new Error(r.error.message);
+      return {settings:a.data,classes:b.data,students:c.data};
+    },
+    async rpc(name,args){const {data,error}=await sb.rpc(name,args||{});if(error)throw new Error(error.message);return data},
+    subscribe(f){
+      let ch=sb.channel('rotation');
+      for(const t of ['students','classes','settings']) ch=ch.on('postgres_changes',{event:'*',schema:'public',table:t},()=>f());
+      ch.subscribe(st=>{LIVE=(st==='SUBSCRIBED');if(LIVE)f();else render()});
+    }
+  };
+}
+
+/* ---------- App state ---------- */
+const P=new URLSearchParams(location.search);
+const VIEW=(P.get('view')||'desk').toLowerCase();
+const CODE=(P.get('code')||'').toUpperCase();
+let B=null, LOADERR=null, LIVE=DEMO, DESK=null, rendered=false;
+let S={settings:{},classes:[],students:[],today:[]};
+const DRAFT={}, OPEN=new Set();
+let H={rows:null};
+let ME=null; try{ME=JSON.parse(lsGet('rotation_student')||'null')}catch(e){}
+
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const mins=t=>Math.max(0,Math.floor((Date.now()-Date.parse(t))/60000));
+const fmtTime=t=>t?new Date(t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'';
+const fmtDate=t=>new Date(t).toLocaleDateString([],{month:'short',day:'numeric'});
+const CN=id=>(S.classes.find(c=>c.id===id)||{}).name||id;
+const dayStr=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*60000);return z.toISOString().slice(0,10)};
+
+function lineFor(cls){
+  const st=S.students.filter(x=>x.class_id===cls).sort((a,b)=>a.position-b.position);
+  return {
+    line:st.filter(x=>x.status!=='absent'&&!(x.status==='busy'&&x.current_kind==='walkin')),
+    floor:st.filter(x=>x.status==='busy'&&x.current_kind==='walkin'),
+    absent:st.filter(x=>x.status==='absent')
+  };
+}
+const nextUp=line=>line.find(x=>x.status==='available'&&x.request_waiting===0);
+
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),3200)}
+function setErr(k,m){const el=document.querySelector(`[data-err="${k}"]`);if(el)el.textContent=m||'';else if(m)toast(m)}
+function inp(k,attrs,def){return `<span class="field"><input data-draft="${k}" value="${esc(DRAFT[k]??def??'')}" ${attrs||''}><span class="err" data-err="${k}"></span></span>`}
+function liveBadge(){return DEMO?`<span class="live on"><span class="dot"></span>Demo mode</span>`:`<span class="live ${LIVE?'on':''}"><span class="dot"></span>${LIVE?'Live':'Connecting…'}</span>`}
+function timerChip(x,T){const m=mins(x.status_since);return `<span class="chip ${m>=T?'warn':''}">${m} min${m>=T?' · check on them':''}</span>`}
+
+/* ---------- Data loading ---------- */
+let rt=null;
+function refresh(now){
+  clearTimeout(rt);
+  return new Promise(res=>{rt=setTimeout(async()=>{
+    try{Object.assign(S,await B.load());LOADERR=null;if(VIEW==='desk'&&DESK)await loadToday()}
+    catch(e){LOADERR=e.message||String(e)}
+    if(VIEW!=='history'||!rendered) render();
+    res();
+  },now?0:150)});
+}
+async function loadToday(){
+  const a=new Date();a.setHours(0,0,0,0);const b=new Date(a);b.setDate(b.getDate()+1);
+  S.today=(await B.rpc('get_history',{p_pin:DESK,p_from:a.toISOString(),p_to:b.toISOString()}))||[];
+}
+
+/* ---------- Views ---------- */
+function render(){
+  const a=document.activeElement, app=document.getElementById('app');
+  if(a&&app.contains(a)&&a.matches('input,select,textarea')){render.pending=true;return}
+  render.pending=false; rendered=true;
+  let h;
+  if(LOADERR&&!S.classes.length) h=`<div class="wrap phone"><div class="card"><h1>${esc(APP)}</h1><p>Couldn't connect.</p><p class="muted">${esc(LOADERR)}</p><button data-act="retry">Try again</button></div></div>`;
+  else if(VIEW==='tv') h=tvView();
+  else if(VIEW==='student') h=studentView();
+  else if(VIEW==='history') h=DESK?historyView():gateView();
+  else h=DESK?deskView():gateView();
+  app.innerHTML=h;
+}
+
+function gateView(){
+  return `<div class="wrap phone"><div class="card stack"><h1>${esc(APP)}</h1>
+  <p class="muted">Enter the front desk PIN to continue.${DEMO?' Demo PIN: 1234.':''}</p>
+  ${inp('deskpin','type="password" inputmode="numeric" autocomplete="off" placeholder="Front desk PIN" data-enter="desklogin"')}
+  <button class="primary" data-act="desklogin">Continue</button></div></div>`;
+}
+
+function demoNote(){return `<div class="demo">Demo mode: everything is saved in this browser only, with sample students. Front desk PIN is 1234 and every student PIN is 1111. Open the TV screen in another tab to watch it update live.</div>`}
+
+function deskView(){
+  const cls=S.settings.active_class, c=S.classes.find(x=>x.id===cls)||{walkins_waiting:0}, T=S.settings.timer_minutes||45;
+  const {line,floor,absent}=lineFor(cls), nx=nextUp(line);
+  const reqTotal=line.concat(floor).reduce((n,x)=>n+x.request_waiting,0);
+  const served=S.today.filter(h=>h.class_id===cls).length;
+  return `<div class="wrap">
+  <header class="top"><h1>${esc(APP)} · front desk</h1>${liveBadge()}</header>
+  ${DEMO?demoNote():''}
+  <div class="seg">${S.classes.map(k=>`<button class="${k.id===cls?'on':''}" data-act="class" data-id="${k.id}">${esc(k.name)}</button>`).join('')}</div>
+  <div class="metrics">
+    <div class="metric"><div class="l">Walk-ins waiting</div><div class="v"><button class="sm" data-act="walkins" data-d="-1" aria-label="One less walk-in">−</button>${c.walkins_waiting}<button class="sm" data-act="walkins" data-d="1" aria-label="One more walk-in">+</button></div></div>
+    <div class="metric"><div class="l">Request clients waiting</div><div class="v">${reqTotal}</div></div>
+    <div class="metric"><div class="l">Clients served today</div><div class="v">${served}</div></div>
+  </div>
+  <div class="card">
+    ${nx?`<div class="next"><div><div class="l">Next walk-in goes to</div><div class="n">${esc(nx.name)}</div></div><button class="go" data-act="assign" data-id="${nx.id}">Assign walk-in</button></div>`
+        :`<div class="next none"><div class="muted">Nobody is free for a walk-in right now.</div></div>`}
+    ${line.length?line.map((x,i)=>deskRow(x,i,T)).join(''):'<p class="muted">No students on the line. Add students under Settings below.</p>'}
+  </div>
+  ${floor.length?`<div class="card"><h2>With walk-in clients</h2>${floor.map(x=>floorRow(x,T,true)).join('')}</div>`:''}
+  ${absent.length?`<div class="card"><h2>Absent</h2>${absent.map(x=>`<div class="row"><div class="who"><strong>${esc(x.name)}</strong><span class="chip bad">Absent</span></div><div class="btns"><button class="sm" data-act="status" data-s="available" data-id="${x.id}">Here</button></div></div>`).join('')}</div>`:''}
+  <div class="card"><h2>Today's history</h2>${todayList(cls)}</div>
+  ${settingsPanel(cls,T)}
+  </div>`;
+}
+
+function deskRow(x,i,T){
+  let chips='',btns=`<button class="sm" data-act="req" data-d="1" data-id="${x.id}">+ Request</button>`;
+  if(x.request_waiting>0) chips+=`<span class="chip req">${x.request_waiting} waiting <button data-act="req" data-d="-1" data-id="${x.id}" aria-label="Remove a waiting request client">−</button></span>`;
+  if(x.status==='busy'){chips+=`<span class="chip busy">With request client · keeps #${i+1}</span>`+timerChip(x,T);btns+=`<button class="sm primary" data-act="done" data-id="${x.id}">Done</button>`}
+  else if(x.status==='break'){chips+='<span class="chip warn">On break</span>';btns+=`<button class="sm" data-act="status" data-s="available" data-id="${x.id}">Back in</button>`}
+  else{
+    if(x.request_waiting>0) btns=`<button class="sm hi" data-act="startreq" data-id="${x.id}">Start request client</button>`+btns;
+    btns+=`<button class="sm" data-act="status" data-s="break" data-id="${x.id}">Break</button><button class="sm" data-act="status" data-s="absent" data-id="${x.id}">Absent</button><button class="sm" data-act="back" data-id="${x.id}">To back</button>`;
+  }
+  return `<div class="row"><div class="who"><span class="num">${i+1}.</span><strong>${esc(x.name)}</strong>${chips}</div><div class="btns">${btns}</div></div>`;
+}
+
+function floorRow(x,T,desk){
+  const req=x.request_waiting>0?`<span class="chip req">${x.request_waiting} waiting${desk?` <button data-act="req" data-d="-1" data-id="${x.id}" aria-label="Remove a waiting request client">−</button>`:''}</span>`:'';
+  return `<div class="row"><div class="who"><strong>${esc(x.name)}</strong><span class="chip busy">With walk-in</span>${timerChip(x,T)}${req}</div>${desk?`<div class="btns"><button class="sm" data-act="req" data-d="1" data-id="${x.id}">+ Request</button><button class="sm primary" data-act="done" data-id="${x.id}">Done</button></div>`:''}</div>`;
+}
+
+function todayList(cls){
+  const rows=S.today.filter(h=>h.class_id===cls).slice(0,15);
+  if(!rows.length) return '<p class="muted">No clients yet today.</p>';
+  return rows.map(h=>`<div class="row"><div class="who"><span class="muted" style="min-width:64px">${fmtTime(h.started_at)}</span><strong>${esc(h.student_name)}</strong><span class="chip ${h.kind==='request'?'req':''}">${h.kind==='request'?'Request':'Walk-in'}</span></div><span class="muted">${h.finished_at?`Done ${fmtTime(h.finished_at)}${h.finished_by==='student'?' (scanned)':''}`:'In the chair'}</span></div>`).join('');
+}
+
+function settingsPanel(cls,T){
+  const st=S.students.filter(x=>x.class_id===cls).sort((a,b)=>a.name.localeCompare(b.name));
+  return `<details class="card" id="settings" ${OPEN.has('settings')?'open':''}><summary>Settings and students</summary>
+  <div class="sec"><h2>Students in ${esc(CN(cls))}</h2>
+    ${st.length?st.map(x=>`<div class="row"><strong>${esc(x.name)}</strong><div class="btns"><button class="sm" data-act="pinstu" data-id="${x.id}">Reset PIN</button><button class="sm" data-act="rmstu" data-id="${x.id}">Remove</button></div></div>`).join(''):'<p class="muted">No students yet.</p>'}
+    <div class="addrow">${inp('ns_name','placeholder="Student name" data-enter="addstu"')}${inp('ns_pin','placeholder="4-digit PIN" inputmode="numeric" maxlength="4" style="width:130px" data-enter="addstu"')}<button class="primary" data-act="addstu">Add student</button></div>
+    <p class="muted">New students join at the back of the line. Give each student their PIN for the scan code.</p>
+  </div>
+  <div class="sec"><h2>Timer</h2><div class="addrow"><span class="muted" style="padding-top:8px">Turn yellow after</span>${inp('timer','type="number" min="5" max="240" step="1" style="width:90px" data-enter="timer"',T)}<span class="muted" style="padding-top:8px">minutes</span><button data-act="timer">Save</button></div></div>
+  <div class="sec"><h2>Scan code</h2><p class="muted">Current code: <strong>${esc(S.settings.scan_code)}</strong>. A new code stops old links from working. Students just scan the TV again.</p><button data-act="newcode">New scan code</button></div>
+  <div class="sec"><h2>Screens</h2><p><a href="?view=tv" target="_blank" rel="noopener">Open TV screen</a> · <a href="?view=history">History and counts</a> · <a href="?view=student" target="_blank" rel="noopener">Student screen</a></p><button class="sm" data-act="logout">Lock front desk</button></div>
+  </details>`;
+}
+
+function studentUrl(){return location.origin+location.pathname+'?view=student&code='+encodeURIComponent(S.settings.scan_code||'')}
+function qrSvg(text){try{const q=qrcode(0,'M');q.addData(text);q.make();return q.createSvgTag(8,2)}catch(e){return `<p style="word-break:break-all;font-size:13px">${esc(text)}</p>`}}
+
+function tvView(){
+  const cls=S.settings.active_class, c=S.classes.find(x=>x.id===cls)||{walkins_waiting:0}, T=S.settings.timer_minutes||45;
+  const {line,floor}=lineFor(cls), nx=nextUp(line);
+  const rows=line.map((x,i)=>{
+    let chips='';
+    if(x.request_waiting>0) chips+=`<span class="chip req">${x.request_waiting} waiting</span>`;
+    if(x.status==='busy') chips+=`<span class="chip busy">With request client</span>`+timerChip(x,T);
+    if(x.status==='break') chips+=`<span class="chip warn">On break</span>`;
+    return `<div class="row"><div class="who"><span class="num">${i+1}.</span>${esc(x.name)}${chips}</div></div>`;
+  }).join('');
+  return `<div class="wrap">
+  <header class="top"><h1>${esc(CN(cls))} · clinic rotation</h1><span class="live">${new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</span></header>
+  <div class="tvgrid"><div>
+    <div class="next"><div>${nx?`<div class="l">Next walk-in</div><div class="n">${esc(nx.name)}</div>`:`<div class="l">Next walk-in</div><div class="n" style="font-size:28px">Next free student</div>`}</div><div style="text-align:right"><div class="l">Walk-ins waiting</div><div class="n">${c.walkins_waiting}</div></div></div>
+    <div class="card">${rows||'<p class="muted">No students on the line.</p>'}</div>
+  </div><div>
+    ${floor.length?`<div class="card"><h2>With walk-in clients</h2>${floor.map(x=>floorRow(x,T,false)).join('')}</div>`:''}
+    <div class="qr">${qrSvg(studentUrl())}<div style="font-size:20px;font-weight:600;margin-top:6px">Finished early?</div><div>Scan to check yourself out</div></div>
+  </div></div></div>`;
+}
+
+function studentView(){
+  const head=`<div class="wrap phone"><header class="top"><h1>${esc(APP)}</h1>${liveBadge()}</header>`;
+  let me=ME&&S.students.find(s=>s.id===ME.id);
+  if(ME&&!me&&S.students.length){ME=null;lsDel('rotation_student')}
+  if(!me){
+    const groups=S.classes.map(c=>{const st=S.students.filter(x=>x.class_id===c.id).sort((a,b)=>a.name.localeCompare(b.name));return st.length?`<optgroup label="${esc(c.name)}">${st.map(x=>`<option value="${x.id}" ${DRAFT.s_who===x.id?'selected':''}>${esc(x.name)}</option>`).join('')}</optgroup>`:''}).join('');
+    return head+`<div class="card stack"><h2>Who are you?</h2>
+      <span class="field"><select data-draft="s_who"><option value="">Choose your name</option>${groups}</select><span class="err" data-err="s_who"></span></span>
+      ${inp('s_pin','type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Your 4-digit PIN" data-enter="s-login"')}
+      <button class="primary big" data-act="s-login">Continue</button>
+      <p class="muted">You only do this once on this phone.${DEMO?' Demo PIN: 1111.':''}</p></div></div>`;
+  }
+  const T=S.settings.timer_minutes||45;
+  const {line}=lineFor(me.class_id), pos=line.findIndex(x=>x.id===me.id), nx=nextUp(line);
+  let status='',sub='',action='';
+  if(me.status==='busy'){
+    const m=mins(me.status_since);
+    status=`With a ${me.current_kind==='request'?'request':'walk-in'} client`;
+    sub=`${m} min in the chair${m>=T?' · over the time limit':''}${me.current_kind==='request'?` · you keep spot #${pos+1}`:''}`;
+    action=CODE?`<button class="go big" data-act="s-done">I'm done</button>`:`<p class="muted">To check out, scan the code on the TV.</p>`;
+  } else if(me.status==='break'){status='On break';sub='The front desk will put you back in.'}
+  else if(me.status==='absent'){status='Marked absent';sub='Let the front desk know you are here.'}
+  else{
+    status=nx&&nx.id===me.id?'You are next for a walk-in':`#${pos+1} in line`;
+    sub=me.request_waiting>0?`${me.request_waiting} request client${me.request_waiting>1?'s':''} waiting for you`:'Get your station ready.';
+    if(me.class_id!==S.settings.active_class) sub=`${CN(me.class_id)} is not on the floor right now.`;
+  }
+  return head+`<div class="card stack"><div><div class="muted">${esc(CN(me.class_id))}</div><div style="font-size:24px;font-weight:600">${esc(me.name)}</div><div class="status">${esc(status)}</div><div class="muted">${esc(sub)}</div></div>
+    ${action}
+    <button class="sm" data-act="s-switch" style="width:auto">Not you? Switch student</button></div></div>`;
+}
+
+function historyView(){
+  const t=new Date(), w=new Date(); w.setDate(w.getDate()-6);
+  const cls=DRAFT.h_cls||'all';
+  let body='<p class="muted">Pick dates and tap Show.</p>';
+  if(H.rows){
+    const rows=H.rows.filter(h=>cls==='all'||h.class_id===cls);
+    const by={};
+    rows.forEach(h=>{const k=h.student_name+'|'+h.class_id;by[k]=by[k]||{name:h.student_name,cls:h.class_id,w:0,r:0};h.kind==='request'?by[k].r++:by[k].w++});
+    const sum=Object.values(by).sort((a,b)=>(b.w+b.r)-(a.w+a.r));
+    body=rows.length?`<h2>Clients per student</h2><div class="tablewrap"><table><tr><th>Student</th><th>Class</th><th>Walk-ins</th><th>Requests</th><th>Total</th></tr>${sum.map(s=>`<tr><td>${esc(s.name)}</td><td>${esc(CN(s.cls))}</td><td>${s.w}</td><td>${s.r}</td><td><strong>${s.w+s.r}</strong></td></tr>`).join('')}</table></div>
+      <h2 class="sec">Every client (${rows.length})</h2><div class="tablewrap"><table><tr><th>Date</th><th>Started</th><th>Finished</th><th>Student</th><th>Type</th></tr>${rows.map(h=>`<tr><td>${fmtDate(h.started_at)}</td><td>${fmtTime(h.started_at)}</td><td>${h.finished_at?fmtTime(h.finished_at)+(h.finished_by==='student'?' (scanned)':''):'—'}</td><td>${esc(h.student_name)}</td><td>${h.kind==='request'?'Request':'Walk-in'}</td></tr>`).join('')}</table></div>`
+      :'<p class="muted">No clients in that date range.</p>';
+  }
+  return `<div class="wrap"><header class="top"><h1>${esc(APP)} · history</h1><a href="?">Back to front desk</a></header>
+  <div class="card"><div class="addrow">
+    <label class="muted">From ${inp('h_from','type="date"',dayStr(w))}</label>
+    <label class="muted">To ${inp('h_to','type="date"',dayStr(t))}</label>
+    <select data-draft="h_cls"><option value="all">All classes</option>${S.classes.map(c=>`<option value="${c.id}" ${cls===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select>
+    <button class="primary" data-act="h-load">Show</button>${H.rows&&H.rows.length?'<button data-act="h-csv">Download spreadsheet (CSV)</button>':''}
+  </div></div>
+  <div class="card">${body}</div></div>`;
+}
+
+/* ---------- Actions ---------- */
+const call=(n,a)=>B.rpc(n,a);
+const ACT={
+  retry:()=>refresh(true),
+  desklogin:async()=>{const p=(DRAFT.deskpin||'').trim();if(!p)return setErr('deskpin','Enter the PIN');
+    if(await call('desk_login',{p_pin:p})){DESK=p;lsSet('rotation_desk_pin',p);DRAFT.deskpin='';await refresh(true);if(VIEW==='history')render()}else setErr('deskpin','That PIN is not right')},
+  logout:()=>{DESK=null;lsDel('rotation_desk_pin');render()},
+  class:async(b,id)=>{await call('set_active_class',{p_pin:DESK,p_class:id})},
+  walkins:async b=>{await call('walkin_count',{p_pin:DESK,p_class:S.settings.active_class,p_delta:+b.dataset.d})},
+  assign:async(b,id)=>{await call('start_client',{p_pin:DESK,p_student:id,p_kind:'walkin'})},
+  startreq:async(b,id)=>{await call('start_client',{p_pin:DESK,p_student:id,p_kind:'request'})},
+  req:async(b,id)=>{await call('request_count',{p_pin:DESK,p_student:id,p_delta:+b.dataset.d})},
+  done:async(b,id)=>{await call('finish_client',{p_pin:DESK,p_student:id})},
+  status:async(b,id)=>{await call('set_status',{p_pin:DESK,p_student:id,p_status:b.dataset.s})},
+  back:async(b,id)=>{await call('move_to_back',{p_pin:DESK,p_student:id})},
+  addstu:async()=>{const n=(DRAFT.ns_name||'').trim(),p=(DRAFT.ns_pin||'').trim();let bad=false;
+    if(!n){setErr('ns_name','Enter a name');bad=true} if(!/^\d{4}$/.test(p)){setErr('ns_pin','Use 4 digits');bad=true} if(bad)return;
+    await call('add_student',{p_pin:DESK,p_class:S.settings.active_class,p_name:n,p_student_pin:p});DRAFT.ns_name='';DRAFT.ns_pin='';document.activeElement&&document.activeElement.blur();toast(`${n} added`)},
+  rmstu:async(b,id)=>{const x=S.students.find(s=>s.id===id);if(x&&confirm(`Remove ${x.name}? Their history stays.`))await call('remove_student',{p_pin:DESK,p_student:id})},
+  pinstu:async(b,id)=>{const x=S.students.find(s=>s.id===id);const p=prompt(`New 4-digit PIN for ${x?x.name:'this student'}:`);if(p===null)return;if(!/^\d{4}$/.test(p.trim()))return toast('PIN must be 4 digits');await call('set_student_pin',{p_pin:DESK,p_student:id,p_new_pin:p.trim()});toast('PIN updated')},
+  timer:async()=>{const m=Math.round(+(DRAFT.timer??S.settings.timer_minutes));if(!(m>=5&&m<=240))return setErr('timer','5 to 240');await call('set_timer',{p_pin:DESK,p_minutes:m});delete DRAFT.timer;document.activeElement&&document.activeElement.blur();toast('Timer saved')},
+  newcode:async()=>{if(confirm('Make a new scan code? Students will need to scan the TV again.'))await call('new_scan_code',{p_pin:DESK})},
+  's-login':async()=>{const id=DRAFT.s_who,p=(DRAFT.s_pin||'').trim();if(!id)return setErr('s_who','Choose your name');if(!/^\d{4}$/.test(p))return setErr('s_pin','Enter your 4-digit PIN');
+    if(await call('student_verify',{p_student:id,p_pin:p})){ME={id,pin:p};lsSet('rotation_student',JSON.stringify(ME));DRAFT.s_pin='';document.activeElement&&document.activeElement.blur();render()}else setErr('s_pin',"That PIN doesn't match. Ask the front desk.")},
+  's-done':async()=>{await call('student_finish',{p_student:ME.id,p_pin:ME.pin,p_code:CODE});toast("You're checked out")},
+  's-switch':()=>{ME=null;lsDel('rotation_student');render()},
+  'h-load':async()=>{const f=DRAFT.h_from||dayStr(new Date(Date.now()-6*864e5)),t=DRAFT.h_to||dayStr(new Date());
+    const a=new Date(f+'T00:00'),b=new Date(t+'T00:00');b.setDate(b.getDate()+1);
+    if(!(a<b))return toast('The start date must be before the end date');
+    H.rows=(await call('get_history',{p_pin:DESK,p_from:a.toISOString(),p_to:b.toISOString()}))||[];document.activeElement&&document.activeElement.blur();render()},
+  'h-csv':()=>{const cls=DRAFT.h_cls||'all',rows=H.rows.filter(h=>cls==='all'||h.class_id===cls);
+    const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+    const csv=[['Date','Started','Finished','Student','Class','Type','Checked out by'].map(q).join(',')].concat(rows.map(h=>[new Date(h.started_at).toLocaleDateString(),fmtTime(h.started_at),fmtTime(h.finished_at),h.student_name,CN(h.class_id),h.kind==='request'?'Request':'Walk-in',h.finished_by==='student'?'Student scan':h.finished_by==='desk'?'Front desk':''].map(q).join(','))).join('\n');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='clinic-history.csv';a.click()}
+};
+const REFRESH_AFTER=new Set(['class','walkins','assign','startreq','req','done','status','back','addstu','rmstu','pinstu','timer','newcode','s-done']);
+
+async function runAct(act,el){
+  if(!ACT[act])return;
+  if(el&&el.tagName==='BUTTON'){if(el._busy)return;el._busy=true}
+  try{await ACT[act](el,el&&el.dataset.id);if(REFRESH_AFTER.has(act))await refresh(true)}
+  catch(e){toast(e.message||'Something went wrong. Try again.')}
+  finally{if(el)el._busy=false}
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b)runAct(b.dataset.act,b)});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.enter){e.preventDefault();runAct(e.target.dataset.enter,null)}});
+function onDraft(e){const k=e.target.dataset&&e.target.dataset.draft;if(k){DRAFT[k]=e.target.value;setErr(k,'')}}
+document.addEventListener('input',onDraft);document.addEventListener('change',onDraft);
+document.addEventListener('focusout',()=>setTimeout(()=>{if(render.pending)render()},0));
+document.addEventListener('toggle',e=>{if(e.target.id)e.target.open?OPEN.add(e.target.id):OPEN.delete(e.target.id)},true);
+
+/* ---------- Start ---------- */
+(async function init(){
+  document.body.classList.add(VIEW);
+  try{B=DEMO?makeLocalBackend():makeSupabaseBackend()}catch(e){LOADERR=e.message;render();return}
+  if(VIEW==='desk'||VIEW==='history'){const p=lsGet('rotation_desk_pin');if(p){try{if(await B.rpc('desk_login',{p_pin:p}))DESK=p;else lsDel('rotation_desk_pin')}catch(e){}}}
+  await refresh(true);
+  B.subscribe(()=>refresh());
+  setInterval(()=>{if(VIEW!=='history')render()},20000);
+  setInterval(()=>refresh(),60000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
+})();
+</script>
+</body>
+</html>
